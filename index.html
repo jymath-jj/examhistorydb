@@ -161,7 +161,7 @@
 
     .stats {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 12px;
       margin-bottom: 18px;
     }
@@ -400,9 +400,9 @@
 
   <main class="wrap">
     <section class="toolbar operation-toolbar">
-      <button class="secondary" onclick="openFolder('original')">원본 PDF 폴더</button>
-      <button class="secondary" onclick="openFolder('solution')">손풀이 PDF 폴더</button>
-      <button class="secondary" onclick="openFolder('csv')">CSV 폴더</button>
+      <button class="secondary" onclick="openFolder('original')">원본 PDF Drive 📂</button>
+      <button class="secondary" onclick="openFolder('solution')">손풀이 PDF Drive 📂</button>
+      <button class="secondary" onclick="openFolder('csv')">CSV Drive 📂</button>
       <button id="processButton" onclick="processNewFiles()">신규 파일 포함 처리</button>
       <button id="quickButton" onclick="quickReanalysis()">빠른 재분석</button>
       <button class="light" onclick="loadSummary()">결과 새로고침</button>
@@ -446,17 +446,12 @@
 
     <section class="stats">
       <div class="stat">
-        <div class="label">조회 건수</div>
+        <div class="label">등록된 시험지</div>
         <div class="value" id="statCount">-</div>
       </div>
 
       <div class="stat">
-        <div class="label">평균 점수</div>
-        <div class="value" id="statAvgScore">-</div>
-      </div>
-
-      <div class="stat">
-        <div class="label">손풀이 등록</div>
+        <div class="label">등록된 손풀이</div>
         <div class="value" id="statSolution">-</div>
       </div>
 
@@ -701,20 +696,10 @@
 
     function updateStats(rows) {
       const count = rows.length;
-
-      const avgScoreValues = rows
-        .map(r => Number(r.평균점수))
-        .filter(Number.isFinite);
-
-      const avgScore = avgScoreValues.length
-        ? (avgScoreValues.reduce((a, b) => a + b, 0) / avgScoreValues.length).toFixed(1)
-        : '-';
-
       const solutionCount = rows.filter(r => r.손풀이상태 === '등록완료').length;
       const usageCount = rows.reduce((sum, r) => sum + Number(r.활용횟수 || 0), 0);
 
       document.getElementById('statCount').textContent = count;
-      document.getElementById('statAvgScore').textContent = avgScore === '-' ? '-' : `${avgScore}점`;
       document.getElementById('statSolution').textContent = `${solutionCount}/${count}`;
       document.getElementById('statUsage').textContent = usageCount;
     }
@@ -729,6 +714,7 @@
 
       area.innerHTML = rows.map(row => {
         const scoreText = getScoreText(row);
+        const top30Text = getTop30Text(row);
 
         return `
           <article class="card">
@@ -741,6 +727,8 @@
               <span class="badge">${escapeHtml(row.회차 || '-')}</span>
               <span class="badge green">응시 ${escapeHtml(row.응시자수 || '-')}명</span>
               <span class="badge ${scoreBadgeClass(row.평균점수)}">평균 ${escapeHtml(scoreText)}</span>
+              <span class="badge green">상위30 ${escapeHtml(top30Text)}</span>
+              <span class="badge">${escapeHtml(row.실시수 || 1)}개 실시</span>
               <span class="badge ${row.손풀이상태 === '등록완료' ? 'green' : 'orange'}">손풀이 ${escapeHtml(row.손풀이상태 || '-')}</span>
               <span class="badge orange">1컷 ${escapeHtml(row.일컷 || '-')}</span>
             </div>
@@ -768,6 +756,7 @@
             </div>
 
             <div class="actions">
+              ${row.원본PDF링크 ? `<a href="${escapeAttr(row.원본PDF링크)}" target="_blank" rel="noopener">원본 열기</a>` : ''}
               ${row.손풀이링크 ? `<a href="${escapeAttr(row.손풀이링크)}" target="_blank" rel="noopener">손풀이 열기</a>` : ''}
               <button class="light" onclick="openCutModalSoon()">1컷 수정</button>
               <button class="light" onclick="openUsageModalSoon()">활용기록</button>
@@ -784,8 +773,12 @@
         return `${row.평균점수}${max}점`;
       }
 
-      if (row.평균문항정답률 !== undefined && row.평균문항정답률 !== null && row.평균문항정답률 !== '') {
-        return `${row.평균문항정답률}%`;
+      return '-';
+    }
+
+    function getTop30Text(row) {
+      if (row.상위30점수 !== undefined && row.상위30점수 !== null && row.상위30점수 !== '') {
+        return `${row.상위30점수}점`;
       }
 
       return '-';
